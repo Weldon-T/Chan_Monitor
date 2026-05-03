@@ -1,0 +1,4 @@
+tushare
+pandas
+tqdm
+timeout_decorator
