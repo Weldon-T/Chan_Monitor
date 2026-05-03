@@ -22,6 +22,7 @@ from tests.conftest import (
 # get_fx_daily  (分型)
 # ====================================================================
 
+@pytest.mark.unit
 class TestGetFxDaily:
     def test_single_top(self, engine):
         high = [10, 12, 10, 10, 10]
@@ -86,6 +87,7 @@ class TestGetFxDaily:
 # get_bi_daily  (笔)
 # ====================================================================
 
+@pytest.mark.unit
 class TestGetBiDaily:
     def test_basic_two_strokes(self, engine):
         fx = [(2, "顶"), (5, "底"), (8, "顶")]
@@ -131,6 +133,7 @@ class TestGetBiDaily:
 # get_xd_daily  (线段)
 # ====================================================================
 
+@pytest.mark.unit
 class TestGetXdDaily:
     def test_four_strokes_produce_three_segments(self, engine):
         bi = build_bi_list_example()  # up, down, up, down
@@ -179,6 +182,7 @@ class TestGetXdDaily:
 # get_zhongshu_daily  (中枢)
 # ====================================================================
 
+@pytest.mark.unit
 class TestGetZhongshuDaily:
     def test_overlapping_segments(self, engine):
         xd = [
@@ -244,6 +248,7 @@ class TestGetZhongshuDaily:
 # get_standard_chan_signals_daily  (买卖点)
 # ====================================================================
 
+@pytest.mark.unit
 class TestGetStandardChanSignalsDaily:
     def _make_dates_closes(self, n=25):
         dates = [f"2024-01-{d:02d}" for d in range(1, n + 1)]
@@ -326,6 +331,7 @@ class TestGetStandardChanSignalsDaily:
 # add_indicators
 # ====================================================================
 
+@pytest.mark.unit
 class TestAddIndicators:
     def test_columns_exist(self, engine, basic_ohlc):
         df = engine.add_indicators(basic_ohlc.copy())
@@ -361,6 +367,7 @@ class TestAddIndicators:
 # check_buy / check_sell
 # ====================================================================
 
+@pytest.mark.unit
 class TestCheckBuy:
     def test_all_four_pass(self, engine):
         """dif > dea, k > d and j < 30, close <= bold*1.03, bias < -2.5"""
@@ -425,6 +432,7 @@ class TestCheckBuy:
         assert cnt == 0
 
 
+@pytest.mark.unit
 class TestCheckSell:
     def test_all_four_pass(self, engine):
         df = make_indicator_df(
@@ -474,6 +482,7 @@ class TestCheckSell:
 # analyze  (full pipeline)
 # ====================================================================
 
+@pytest.mark.unit
 class TestAnalyze:
     def test_insufficient_data(self, engine):
         df = make_ohlc_df(

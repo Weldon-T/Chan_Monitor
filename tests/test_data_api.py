@@ -15,6 +15,7 @@ from unittest.mock import patch, MagicMock
 # build_kline
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 class TestBuildKline:
     def test_empty_df(self):
         from core.data_api import DataAPI
@@ -115,6 +116,7 @@ class TestBuildKline:
 # get_daily_kline  (mocked Tushare)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 class TestGetDailyKline:
     @pytest.fixture
     def mock_tushare_df(self):

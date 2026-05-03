@@ -47,6 +47,7 @@ def _downtrend_then_uptrend(n=200, seed=123):
 # tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.e2e
 class TestFullPipeline:
     """Run the complete analyze() pipeline with synthetic data."""
 
@@ -122,6 +123,7 @@ class TestFullPipeline:
             assert item["price"] > 0
 
 
+@pytest.mark.e2e
 class TestDataApiIntegration:
     """Mocked DataAPI → ChanLunEngine integration."""
 

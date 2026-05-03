@@ -55,6 +55,7 @@ def _sample_signals():
 # to_weekly / to_monthly
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestResampleMethods:
     def test_to_weekly_reduces_rows(self):
         from ui.monitor_window import MonitorWindow
@@ -106,6 +107,7 @@ class TestResampleMethods:
 # CSV  operations
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestCsvOperations:
     @pytest.fixture
     def csv_path(self, tmp_path):
@@ -158,6 +160,7 @@ class TestCsvOperations:
 # render  (signal formatting + GUI scheduling)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestRender:
     def test_render_schedules_correct_number_of_inserts(self):
         """render() should call root.after once per signal."""

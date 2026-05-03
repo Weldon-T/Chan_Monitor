@@ -19,6 +19,14 @@ pip install <pkg>
 .venv/Scripts/python.exe -m pip install <pkg>
 ```
 
+## Git / GitHub
+
+- 仓库地址：`https://github.com/Weldon-T/Chan_Monitor`
+- 提交用户名：`Weldon-T`，邮箱：`Weldon-T@users.noreply.github.com`
+- 提交时**不要**加 `Co-Authored-By`
+- remote URL 使用纯净地址（不含 PAT），认证走 Git Credential Manager
+- push 前确保 `.env` 等敏感文件已被 `.gitignore` 排除
+
 ## 运行
 
 ```bash
