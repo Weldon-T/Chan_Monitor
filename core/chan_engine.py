@@ -5,10 +5,10 @@ class ChanLunEngine:
     def analyze(self, df, period_name, code):
         df = df.copy().reset_index(drop=True)
         total_k = len(df)
-        print(f"📊 [{code}] [{period_name}] K线总数：{total_k}")
+        print(f"[统计] [{code}] [{period_name}] K线总数：{total_k}")
 
         if total_k < 30:
-            print(f"⚠️ [{code}] [{period_name}] 数据不足\n")
+            print(f"[WARN] [{code}] [{period_name}] 数据不足\n")
             return {"accurate_buy": [], "accurate_sell": [], "normal_buy": [], "normal_sell": []}
 
         df = self.add_indicators(df)
@@ -30,7 +30,7 @@ class ChanLunEngine:
         # xd_list = self.get_xd(bi_list)
         # zs_list = self.get_zhongshu(xd_list)
 
-        print(f"✅ [{code}] [{period_name}] 分型：{len(fx_list)} | 笔：{len(bi_list)} | 线段：{len(xd_list)} | 中枢：{len(zs_list)}")
+        print(f"[OK] [{code}] [{period_name}] 分型：{len(fx_list)} | 笔：{len(bi_list)} | 线段：{len(xd_list)} | 中枢：{len(zs_list)}")
 
         buy_points, sell_points = self.get_standard_chan_signals_daily(xd_list, zs_list, dates, closes)
 
@@ -38,7 +38,7 @@ class ChanLunEngine:
 
         for idx, dt, p, tp in buy_points:
             ok, names, cnt = self.check_buy(df, idx)
-            print(f"👉 [{code}] [{period_name}] {tp} | {dt} | 价:{p:.2f} | 指标:{cnt}/4 [{names}]")
+            print(f"[信号] [{code}] [{period_name}] {tp} | {dt} | 价:{p:.2f} | 指标:{cnt}/4 [{names}]")
             item = {"time": dt, "price": p, "type": f"[{period_name}]{tp}", "indicators": names}
             if cnt >= 3:
                 accurate_buy.append(item)
@@ -47,14 +47,14 @@ class ChanLunEngine:
 
         for idx, dt, p, tp in sell_points:
             ok, names, cnt = self.check_sell(df, idx)
-            print(f"👉 [{code}] [{period_name}] {tp} | {dt} | 价:{p:.2f} | 指标:{cnt}/4 [{names}]")
+            print(f"[信号] [{code}] [{period_name}] {tp} | {dt} | 价:{p:.2f} | 指标:{cnt}/4 [{names}]")
             item = {"time": dt, "price": p, "type": f"[{period_name}]{tp}", "indicators": names}
             if cnt >= 3:
                 accurate_sell.append(item)
             elif cnt == 2:
                 normal_sell.append(item)
 
-        print(f"🎯 [{code}] [{period_name}] 精准(≥3)买:{len(accurate_buy)} 卖:{len(accurate_sell)} | 参考(=2)买:{len(normal_buy)} 卖:{len(normal_sell)}\n")
+        print(f"[结果] [{code}] [{period_name}] 精准(>=3)买:{len(accurate_buy)} 卖:{len(accurate_sell)} | 参考(=2)买:{len(normal_buy)} 卖:{len(normal_sell)}\n")
         return {
             "accurate_buy": accurate_buy, "accurate_sell": accurate_sell,
             "normal_buy": normal_buy, "normal_sell": normal_sell

@@ -11,7 +11,7 @@ class DataAPI:
         self.pro = ts.pro_api()
 
     def get_daily_kline(self, code):
-        print(f"📥 开始拉取 {code} 日线数据...")
+        print(f"[拉取] {code} 日线数据...")
 
         end = datetime.now()
         start = end - timedelta(days=HISTORY_DAYS)
@@ -30,14 +30,14 @@ class DataAPI:
                 fields="trade_date,open,high,low,close,vol"
             )
         except Exception as e:
-            print(f"❌ {code} 拉取失败: {e}")
+            print(f"[ERR] {code} 拉取失败: {e}")
             return pd.DataFrame(columns=["date","open","high","low","close","volume"])
 
         df = df.rename(columns={"trade_date": "date", "vol": "volume"})
         df["date"] = pd.to_datetime(df["date"], errors="coerce")
         df = df.sort_values("date").dropna().reset_index(drop=True)
 
-        print(f"✅ {code} 拉取完成：{len(df)} 根K线")
+        print(f"[OK] {code} 拉取完成：{len(df)} 根K线")
         return df
 
     def build_kline(self, df, level):

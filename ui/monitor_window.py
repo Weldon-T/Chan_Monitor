@@ -110,9 +110,9 @@ class MonitorWindow:
                 res = self.chan.analyze(d, p, code)
                 self.render(code, res)
 
-            print(f"✅ {code} 完成")
+            print(f"[OK] {code} 完成")
         except Exception as e:
-            print(f"❌ {code} 错误：{e}")
+            print(f"[ERR] {code} 错误：{e}")
 
     def run(self):
         for code in self.codes:

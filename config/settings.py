@@ -2,6 +2,8 @@
 # Tushare 免费账号配置
 # ======================
 import os
+from dotenv import load_dotenv
+load_dotenv()
 TUSHARE_TOKEN = os.getenv("TUSHARE_TOKEN", "")
 
 # 日线拉取最近 2 年
