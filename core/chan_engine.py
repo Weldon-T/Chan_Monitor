@@ -171,12 +171,21 @@ class ChanLunEngine:
         sell = []
         if not zs_list or not xd_list:
             return buy, sell
-        zs = zs_list[-1]
         used = set()
         for i, xd in enumerate(xd_list):
             idx = xd["e"]
             if idx >= len(dates) or idx in used:
                 continue
+
+            # 找到该线段之前最近的中枢
+            zs = None
+            for z in reversed(zs_list):
+                if z["end_idx"] < i:
+                    zs = z
+                    break
+            if zs is None:
+                continue
+
             dt = dates[idx]
             p = round(closes[idx], 2)
 
@@ -391,15 +400,19 @@ class ChanLunEngine:
             return False, "", 0
 
     def add_indicators(self, df):
+        n = len(df)
+        if n == 0:
+            for col in ["dif", "dea", "k", "d", "j", "bolu", "bold", "bias"]:
+                df[col] = []
+            return df
         c = df["close"].values
         h = df["high"].values
         l = df["low"].values
-        n = len(c)
 
-        ema12 = np.convolve(c, np.ones(12)/12, "same")
-        ema26 = np.convolve(c, np.ones(26)/26, "same")
+        ema12 = pd.Series(c).ewm(span=12, adjust=False).mean().values
+        ema26 = pd.Series(c).ewm(span=26, adjust=False).mean().values
         df["dif"] = ema12 - ema26
-        df["dea"] = np.convolve(df["dif"], np.ones(9)/9, "same")
+        df["dea"] = pd.Series(df["dif"]).ewm(span=9, adjust=False).mean().values
 
         k,d,j = np.zeros(n),np.zeros(n),np.zeros(n)
         k[0]=d[0]=50
@@ -412,7 +425,7 @@ class ChanLunEngine:
         df["k"]=k; df["d"]=d; df["j"]=3*k-2*d
 
         ma20 = np.convolve(c, np.ones(20)/20, "same")
-        std = np.array([np.std(c[max(0,i-19):i+1]) for i in range(n)])
+        std = pd.Series(c).rolling(20, min_periods=1).std().values
         df["bolu"]=ma20+2*std; df["bold"]=ma20-2*std
 
         ma6 = np.convolve(c, np.ones(6)/6, "same")

@@ -20,3 +20,4 @@ build/
 # 输出
 trading_signals.csv
 .pytest_cache/
+cache/

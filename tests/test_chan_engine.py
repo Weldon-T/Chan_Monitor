@@ -260,14 +260,15 @@ class TestGetStandardChanSignalsDaily:
         return dates, closes
 
     def test_buy_signals(self, engine):
-        xd = build_bi_list_example()
         xd_for_sig = [
             {"s": 5, "e": 10, "dir": "down", "high": 15, "low": 8},
             {"s": 10, "e": 15, "dir": "up", "high": 18, "low": 8},
             {"s": 15, "e": 20, "dir": "down", "high": 18, "low": 5},
+            {"s": 20, "e": 22, "dir": "down", "high": 18, "low": 10},
         ]
         zs = build_zhongshu_list_example()
         dates, closes = self._make_dates_closes()
+        closes[22] = 10.0
         buy, sell = engine.get_standard_chan_signals_daily(xd_for_sig, zs, dates, closes)
 
         buy_types = {b[3] for b in buy}
@@ -357,10 +358,12 @@ class TestAddIndicators:
         assert not np.isnan(df["bias"].iat[mid])
 
     def test_empty_df(self, engine):
-        """Empty DataFrame raises ValueError from np.convolve – acceptable behaviour."""
+        """Empty DataFrame should return indicator columns without crashing."""
         df = pd.DataFrame(columns=["date", "open", "high", "low", "close", "volume"])
-        with pytest.raises(ValueError):
-            engine.add_indicators(df)
+        result = engine.add_indicators(df)
+        for col in ["dif", "dea", "k", "d", "j", "bolu", "bold", "bias"]:
+            assert col in result.columns
+        assert len(result) == 0
 
 
 # ====================================================================

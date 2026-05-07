@@ -176,7 +176,8 @@ class TestGetDailyKline:
             assert result["date"].is_monotonic_increasing
 
     def test_tushare_exception_returns_empty_df(self):
-        with patch("core.data_api.ts") as mock_ts:
+        with patch("core.data_api.ts") as mock_ts, \
+             patch("core.data_api.DataAPI._load_cache", return_value=None):
             mock_ts.set_token.return_value = None
             mock_api = MagicMock()
             mock_api.daily.side_effect = Exception("Network error")

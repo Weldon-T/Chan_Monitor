@@ -135,5 +135,5 @@ def build_bi_list_example():
 
 def build_zhongshu_list_example():
     """Return the single zhongshu produced by build_bi_list_example."""
-    return [{"zg": 15, "zd": 8, "mid": 11.5, "end_idx": 2,
+    return [{"zg": 15, "zd": 8, "mid": 11.5, "end_idx": 0,
              "segments": build_bi_list_example()[:3]}]

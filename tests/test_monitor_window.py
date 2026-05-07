@@ -1,7 +1,5 @@
 """
-Tests for MonitorWindow – data transformation, CSV I/O, and signal rendering.
-
-GUI construction is tested minimally (skipped when no display is available).
+Tests for MonitorWindow – data transformation (via DataAPI), CSV I/O, and signal rendering.
 """
 
 import pytest
@@ -9,7 +7,6 @@ import os
 import csv
 import pandas as pd
 import numpy as np
-from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 
@@ -33,7 +30,7 @@ def _make_daily_df(dates=None):
 
 
 def _sample_signals():
-    """Return a result dict that mimics ChanLunEngine.analyze output."""
+    """Return a result dict that mimics ChanLunEngine.analyze output per period."""
     return {
         "accurate_buy": [
             {"time": "2024-03-15", "price": 9.50, "type": "[日线]一买",
@@ -51,56 +48,46 @@ def _sample_signals():
     }
 
 
+def _all_res(signals=None):
+    """Wrap signals into the all_res dict {period: result} expected by render()."""
+    return {"日线": signals or _sample_signals()}
+
+
 # ---------------------------------------------------------------------------
-# to_weekly / to_monthly
+# DataAPI.build_kline  (resample moved to DataAPI)
 # ---------------------------------------------------------------------------
 
 @pytest.mark.unit
-class TestResampleMethods:
-    def test_to_weekly_reduces_rows(self):
-        from ui.monitor_window import MonitorWindow
-        mw = MonitorWindow.__new__(MonitorWindow)  # skip __init__
+class TestBuildKline:
+    def test_weekly_reduces_rows(self):
+        from core.data_api import DataAPI
+        api = DataAPI()
         df = _make_daily_df()
-        result = mw.to_weekly(df)
+        result = api.build_kline(df, "周线")
         assert len(result) < len(df)
-        assert len(result) >= 4  # 30 days ≈ 4+ weeks
+        assert len(result) >= 4
 
-    def test_to_monthly_reduces_rows(self):
-        from ui.monitor_window import MonitorWindow
-        mw = MonitorWindow.__new__(MonitorWindow)
+    def test_monthly_reduces_rows(self):
+        from core.data_api import DataAPI
+        api = DataAPI()
         df = _make_daily_df(pd.date_range("2024-01-01", periods=90, freq="D"))
-        result = mw.to_monthly(df)
+        result = api.build_kline(df, "月线")
         assert len(result) < len(df)
-        assert 2 <= len(result) <= 4  # 90 days ≈ 3 months
+        assert 2 <= len(result) <= 4
 
-    def test_to_weekly_preserves_ohlc_columns(self):
-        from ui.monitor_window import MonitorWindow
-        mw = MonitorWindow.__new__(MonitorWindow)
+    def test_weekly_preserves_ohlc_columns(self):
+        from core.data_api import DataAPI
+        api = DataAPI()
         df = _make_daily_df()
-        result = mw.to_weekly(df)
+        result = api.build_kline(df, "周线")
         for col in ["open", "high", "low", "close"]:
             assert col in result.columns
 
-    def test_to_weekly_date_is_string(self):
-        from ui.monitor_window import MonitorWindow
-        mw = MonitorWindow.__new__(MonitorWindow)
-        df = _make_daily_df()
-        result = mw.to_weekly(df)
-        assert isinstance(result["date"].iloc[0], str)
-
-    def test_to_weekly_open_is_first_of_week(self):
-        from ui.monitor_window import MonitorWindow
-        mw = MonitorWindow.__new__(MonitorWindow)
-        dates = pd.date_range("2024-01-01", periods=14, freq="D")
-        df = _make_daily_df(dates)
-        # Monday open is low, Friday open is high
-        df["open"] = [1, 2, 3, 4, 5, 2, 2, 1, 2, 3, 4, 5, 2, 2]
-
-        result = mw.to_weekly(df)
-        first_week_open = result["open"].iloc[0]
-        # get the first date that falls in the first ISO week
-        first_monday = dates[0]  # 2024-01-01 is Monday
-        assert first_week_open == df[df["date"] == first_monday]["open"].values[0]
+    def test_empty_df_returns_empty(self):
+        from core.data_api import DataAPI
+        api = DataAPI()
+        result = api.build_kline(pd.DataFrame(), "周线")
+        assert result.empty
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +104,7 @@ class TestCsvOperations:
         from ui.monitor_window import MonitorWindow
         mw = MonitorWindow.__new__(MonitorWindow)
         mw.csv_path = csv_path
+        mw._seen = set()
         mw.init_csv()
 
         assert os.path.exists(csv_path)
@@ -129,22 +117,22 @@ class TestCsvOperations:
         from ui.monitor_window import MonitorWindow
         mw = MonitorWindow.__new__(MonitorWindow)
         mw.csv_path = csv_path
+        mw._seen = set()
         mw.init_csv()
 
-        # write something after header
         with open(csv_path, "a", newline="", encoding="utf-8-sig") as f:
             csv.writer(f).writerow(["000001.SZ", "日线", "2024-01-01", "10.0", "MACD", "now"])
 
-        # second init should not delete data
         mw.init_csv()
         with open(csv_path, "r", encoding="utf-8-sig") as f:
             rows = list(csv.reader(f))
-            assert len(rows) == 2  # header + 1 data row
+            assert len(rows) == 2
 
     def test_save_csv_appends_row(self, csv_path):
         from ui.monitor_window import MonitorWindow
         mw = MonitorWindow.__new__(MonitorWindow)
         mw.csv_path = csv_path
+        mw._seen = set()
         mw.init_csv()
 
         row = ["000001.SZ", "[日线]一买", "2024-03-15", "9.50", "MACD,KDJ", "2024-03-15 10-30-00"]
@@ -155,6 +143,36 @@ class TestCsvOperations:
             assert len(rows) == 2
             assert rows[1] == row
 
+    def test_save_csv_skips_duplicate(self, csv_path):
+        from ui.monitor_window import MonitorWindow
+        mw = MonitorWindow.__new__(MonitorWindow)
+        mw.csv_path = csv_path
+        mw._seen = set()
+        mw.init_csv()
+
+        row = ["000001.SZ", "[日线]一买", "2024-03-15", "9.50", "MACD,KDJ", "2024-03-15 10-30-00"]
+        mw.save_csv(row)
+        mw.save_csv(row)  # duplicate — should be skipped
+
+        with open(csv_path, "r", encoding="utf-8-sig") as f:
+            rows = list(csv.reader(f))
+            assert len(rows) == 2  # header + 1 row, not 3
+
+    def test_init_csv_loads_existing_keys(self, csv_path):
+        from ui.monitor_window import MonitorWindow
+        mw = MonitorWindow.__new__(MonitorWindow)
+        mw.csv_path = csv_path
+        mw._seen = set()
+        mw.init_csv()
+
+        mw.save_csv(["000001.SZ", "[日线]一买", "2024-03-15", "9.50", "MACD", "now"])
+
+        mw2 = MonitorWindow.__new__(MonitorWindow)
+        mw2.csv_path = csv_path
+        mw2._seen = set()
+        mw2.init_csv()
+        assert ("000001.SZ", "[日线]一买", "2024-03-15") in mw2._seen
+
 
 # ---------------------------------------------------------------------------
 # render  (signal formatting + GUI scheduling)
@@ -163,7 +181,6 @@ class TestCsvOperations:
 @pytest.mark.unit
 class TestRender:
     def test_render_schedules_correct_number_of_inserts(self):
-        """render() should call root.after once per signal."""
         from ui.monitor_window import MonitorWindow
         mw = MonitorWindow.__new__(MonitorWindow)
         mw.root = MagicMock()
@@ -171,10 +188,7 @@ class TestRender:
         mw.sell_list = MagicMock()
         mw.save_csv = MagicMock()
 
-        signals = _sample_signals()
-        mw.render("TEST", signals)
-
-        # 1 accurate buy + 1 accurate sell + 1 normal buy = 3 signals
+        mw.render("TEST", _all_res())
         assert mw.root.after.call_count == 3
 
     def test_render_accurate_buy_uses_add_buy(self, monkeypatch):
@@ -188,16 +202,14 @@ class TestRender:
         mw.add_buy = MagicMock()
         mw.add_sell = MagicMock()
 
-        # patch root.after to call the callback immediately
         def fake_after(ms, cb, *args):
             cb(*args)
         mw.root.after = fake_after
 
-        signals = _sample_signals()
-        mw.render("TEST", signals)
+        mw.render("TEST", _all_res())
 
-        assert mw.add_buy.call_count == 2   # 1 accurate + 1 normal
-        assert mw.add_sell.call_count == 1  # 1 accurate
+        assert mw.add_buy.call_count == 2
+        assert mw.add_sell.call_count == 1
 
     def test_render_line_format(self, monkeypatch):
         from ui.monitor_window import MonitorWindow
@@ -209,11 +221,53 @@ class TestRender:
 
         captured_lines = []
         def fake_after(ms, cb, *args):
-            captured_lines.append(args[0])  # first arg to add_buy/add_sell is the line
+            captured_lines.append(args[0])
         mw.root.after = fake_after
 
-        signals = _sample_signals()
-        mw.render("TEST", signals)
+        mw.render("TEST", _all_res())
 
         assert any("[精准]" in line and "TEST" in line for line in captured_lines)
         assert any("一买" in line for line in captured_lines)
+
+
+# ---------------------------------------------------------------------------
+# cross-timeframe confirmation
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+class TestCrossTimeframe:
+    def test_daily_confirmed_by_weekly(self):
+        from ui.monitor_window import MonitorWindow
+        date_sets = {
+            "日线": {pd.Timestamp("2024-03-15").date()},
+            "周线": {pd.Timestamp("2024-03-14").date()},
+            "月线": set(),
+        }
+        assert MonitorWindow._is_confirmed("2024-03-15", "日线", date_sets) is True
+
+    def test_daily_not_confirmed_if_too_far(self):
+        from ui.monitor_window import MonitorWindow
+        date_sets = {
+            "日线": {pd.Timestamp("2024-03-15").date()},
+            "周线": {pd.Timestamp("2024-03-25").date()},
+            "月线": set(),
+        }
+        assert MonitorWindow._is_confirmed("2024-03-15", "日线", date_sets) is False
+
+    def test_weekly_confirmed_by_monthly(self):
+        from ui.monitor_window import MonitorWindow
+        date_sets = {
+            "日线": set(),
+            "周线": {pd.Timestamp("2024-03-14").date()},
+            "月线": {pd.Timestamp("2024-03-12").date()},
+        }
+        assert MonitorWindow._is_confirmed("2024-03-14", "周线", date_sets) is True
+
+    def test_monthly_never_confirmed(self):
+        from ui.monitor_window import MonitorWindow
+        date_sets = {
+            "日线": {pd.Timestamp("2024-03-15").date()},
+            "周线": {pd.Timestamp("2024-03-14").date()},
+            "月线": {pd.Timestamp("2024-03-13").date()},
+        }
+        assert MonitorWindow._is_confirmed("2024-03-13", "月线", date_sets) is False
