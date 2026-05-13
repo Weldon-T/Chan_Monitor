@@ -1,11 +1,11 @@
+import sys
 from ui.monitor_window import MonitorWindow
 
 if __name__ == "__main__":
-    watch_list = [
-        "603043.SH",
-        "600104.SH",
-        "000035.SZ",
-    ]
+    if len(sys.argv) < 2:
+        print("用法: python main.py 股票代码 [股票代码 ...]")
+        print("示例: python main.py 000001.SZ 600519.SH")
+        sys.exit(1)
 
-    gui = MonitorWindow(watch_list)
+    gui = MonitorWindow(sys.argv[1:])
     gui.start()
